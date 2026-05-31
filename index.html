@@ -264,38 +264,71 @@
         }
 
         // ==== ระบบ Leaderboard ====
-        function saveScore() {
-            let board = JSON.parse(localStorage.getItem('matchingGameScores')) || [];
-            let today = new Date().toLocaleDateString('th-TH');
-            board.push({ name: currentPlayerName, score: totalPoints, date: today });
-            board.sort((a, b) => b.score - a.score);
-            localStorage.setItem('matchingGameScores', JSON.stringify(board));
-        }
+        async function saveScore() {
 
-        function showLeaderboard() {
-            let board = JSON.parse(localStorage.getItem('matchingGameScores')) || [];
-            let tbody = document.getElementById('leaderboard-tbody');
-            tbody.innerHTML = '';
-            
-            if(board.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">ยังไม่มีสถิติผู้เล่นครับ</td></tr>';
-            } else {
-                board.forEach((entry, index) => {
-                    if(index < 10) {
-                        tbody.innerHTML += `<tr><td>${index+1}</td><td>${entry.name}</td><td><strong>${entry.score}</strong></td><td>${entry.date}</td></tr>`;
-                    }
-                });
-            }
-            document.getElementById('leaderboard-modal').style.display = 'flex';
-        }
+    const today = new Date().toLocaleDateString('th-TH');
 
-        function clearLeaderboard() {
-            if (confirm("⚠️ ยืนยันการล้างข้อมูลตารางคะแนนทั้งหมด?\n(ข้อมูลจะไม่สามารถกู้คืนได้)")) {
-                localStorage.removeItem('matchingGameScores');
-                showLeaderboard(); 
-                alert("✅ ล้างข้อมูลตารางคะแนนเรียบร้อยแล้ว");
-            }
+    await push(
+        ref(db, "leaderboard"),
+        {
+            name: currentPlayerName,
+            score: totalPoints,
+            date: today
         }
+    );
+}
+
+       async function showLeaderboard() {
+
+    const snapshot = await get(ref(db, "leaderboard"));
+
+    let board = [];
+
+    if(snapshot.exists()) {
+
+        Object.values(snapshot.val()).forEach(item => {
+            board.push(item);
+        });
+
+        board.sort((a,b)=>b.score-a.score);
+    }
+
+    let tbody = document.getElementById('leaderboard-tbody');
+    tbody.innerHTML = '';
+
+    if(board.length === 0){
+
+        tbody.innerHTML =
+        '<tr><td colspan="4">ยังไม่มีสถิติผู้เล่น</td></tr>';
+
+    } else {
+
+        board.slice(0,10).forEach((entry,index)=>{
+
+            tbody.innerHTML += `
+            <tr>
+                <td>${index+1}</td>
+                <td>${entry.name}</td>
+                <td><strong>${entry.score}</strong></td>
+                <td>${entry.date}</td>
+            </tr>`;
+        });
+    }
+
+    document.getElementById('leaderboard-modal').style.display='flex';
+}
+
+        async function clearLeaderboard() {
+
+    if(confirm("⚠️ ยืนยันการล้างคะแนนทั้งหมด ?")){
+
+        await remove(ref(db,"leaderboard"));
+
+        showLeaderboard();
+
+        alert("ล้างข้อมูลสำเร็จ");
+    }
+}
 
         // ==== ระบบการนำทาง ====
         function showMenu() {
@@ -484,5 +517,36 @@
             });
         }
     </script>
+    <script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  get,
+  remove
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDTcyk2h5tfcEjozvVoU6kNScp_qbfE7Es",
+  authDomain: "electronics-game-match.firebaseapp.com",
+  databaseURL: "https://electronics-game-match-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "electronics-game-match",
+  storageBucket: "electronics-game-match.firebasestorage.app",
+  messagingSenderId: "343890843644",
+  appId: "1:343890843644:web:6fdc68edb3d4e6eb5e8479"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+window.db = db;
+window.ref = ref;
+window.push = push;
+window.get = get;
+window.remove = remove;
+
+</script>
 </body>
 </html>
